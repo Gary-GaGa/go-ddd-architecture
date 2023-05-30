@@ -1,4 +1,4 @@
-module go-ddd
+module go-ddd-architecture
 
 go 1.20
 
