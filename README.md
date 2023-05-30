@@ -1,4 +1,4 @@
-# DDD-Architecture
+# go-ddd-architecture
 
 
 
