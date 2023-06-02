@@ -2,9 +2,9 @@
 
 ## 描述
 
-## Clean-Architecture
+## Domain Driven Design (領域驅動設計)
 
-## DDD
+## Clean-Architecture (整潔架構)
 
 ## 架構說明
 
