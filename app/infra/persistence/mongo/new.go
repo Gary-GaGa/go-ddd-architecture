@@ -1,2 +1,0 @@
-// Package mongo -
-package mongo

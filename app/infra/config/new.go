@@ -1,2 +1,0 @@
-// Pcakage: config -
-package config
