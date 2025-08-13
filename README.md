@@ -1,4 +1,3 @@
-
 # Golang DDD × Clean Architecture × 工程師訓練 AI 寵物放置型遊戲
 
 > **專案定位**  
@@ -23,6 +22,7 @@
 
 - 以 Golang 為主，實踐 DDD 聚合根、實體、值物件、服務、Repository 分層
 - 採用 Clean Architecture、Hexagonal 架構，嚴格區分 Domain、Application、Adapter、Infrastructure
+- 前端以 Ebitengine（Ebiten）作為 Presenter/UI，透過 Usecase Port 介接邏輯；不串接後端（完全離線，本地存檔）
 - 遊戲主題：工程師培養 AI 寵物，放置型成長循環（語言學習 → 解題 → 收益 → 升級 → 新挑戰）
 - 系統模組：技能樹、資源系統（知識點、研發點、算力）、升級模組、語言學習、任務系統
 - 運用 AI（如 ChatGPT）輔助企劃、架構設計、測試案例與程式生成
@@ -74,7 +74,7 @@
 - **放置與解題邏輯**：AI 學會語言後即可自動解題，產生知識點、研發點與特殊事件，離線收益可累積 8 小時
 
 > [!NOTE]
-> 詳細遊戲設計請參考 `GameDesign.md` 與 `/docs` 目錄。
+> 詳細遊戲設計請參考 `docs/game-design.md`。
 
 ---
 
@@ -119,6 +119,67 @@
 
 ---
 
-如需更詳細的遊戲設計與架構說明，請參考 `GameDesign.md` 及 `/docs` 目錄。
+如需更詳細的遊戲設計與架構說明，請參考 `docs/game-design.md`。
 
 ---
+
+
+## MVP 里程碑與開發任務
+
+### MVP 目標（2 週內可玩）
+- Go/Python 兩條語言
+- 練習任務與解題任務
+- 知識點與研發點資源系統
+- 升級語言等級
+- 離線收益上限 8 小時
+- bbolt 儲存
+- CLI 與 Ebitengine 簡易 UI
+ - 純本地時間校驗（wall-clock + 單調時間代理值），偵測時間異常時採保守結算並提示
+
+### 開發任務
+- Sprint 0：建立 Domain 模型與用例、離線收益計算、bbolt 儲存庫實作、CLI 介面、單元測試。
+- Sprint 1：Ebitengine 桌面版主迴圈（Update/Draw）、UI Presenter、按鍵互動、存讀檔整合。
+- 驗收標準：啟動可查看資源與任務狀態、開始任務並完成獲獎、升級語言後產出變化、離線收益正確計算並受 8 小時限制、存檔可於關閉後重啟讀取、時間逆轉/異常跳動時離線收益採保守結算並提示。
+
+## 專案目錄規劃（MVP 階段）
+
+```
+/domain
+  /player
+  /task
+  /language
+  /resource
+  clock.go
+  rng.go
+  events.go
+/usecase
+  game_loop.go
+/adapter
+  presenter/
+  repo/
+/infra
+  /storage/bbolt_store.go
+/cmd
+  /cli/main.go
+  /desktop/main.go
+/configs/*.json
+/docs
+```
+
+- `/domain`：純領域邏輯，包含玩家、任務、語言、資源等核心模型與事件。
+- `/usecase`：應用服務層，負責遊戲主流程與業務協調。
+- `/adapter`：轉接層，包含 Presenter 與 Repository 實作，負責介面與資料存取。
+- `/infra`：基礎設施層，實作底層技術細節，如 bbolt 資料庫存取。
+- `/cmd`：應用啟動程式碼，包含 CLI 與桌面版入口。
+- `/configs`：配置檔案，存放 JSON 格式的設定。
+- `/docs`：遊戲設計與架構說明文件。
+
+---
+
+## 架構草圖
+
+請參考 `docs/architecture.md`，內含：
+- 層次/元件原理圖（Presenter × Usecase × Domain × Infra）
+- 啟動與離線收益序列圖
+- Update/Draw 主迴圈與 Advance(Δt) 時間驅動
+- 介面約定、領域模型速覽、離線時間校驗策略
