@@ -220,16 +220,28 @@ go build -o bin/ebiten-client ./client/cmd/ebiten-client
 ./bin/ebiten-client
 ```
 
-啟動後，視窗左側會顯示資源與任務資訊，右側為語言主題的 AI 視覺區。
+啟動後，畫面採用 Balanced Dashboard 版面：
 
-### 操作鍵（Controls）
+- 左側（Status）：顯示 Knowledge / Research / Level、每分鐘產率（Rates）、Est. Success（估計成功率）與網路/錯誤提示。
+- 中央（Task + Shiba）：上方為任務卡（顯示任務類型、Started 語言與倒數圓環），下方為 Shiba 像素視覺。
+- 右側（Languages）：列出各語言的 K / R / Lv，並反白目前選擇的語言。
 
-- P：開始練習任務（Practice）
-- F：嘗試完成（Try Finish）
-- U：升級 Knowledge（消耗 Research；不足時會提示）
-- C：結算離線收益（Claim Offline）
-- 1/2/3：切換語言（Go / Python / JavaScript）
+### 操作鍵（Controls）與行為
 
-提示：左側 Status 卡會顯示 Est. Success（估計成功率）、Rates（每分鐘知識/研發產率）。任務卡會顯示語言、Base 奖勵與總時長，右側圓環以 mm:ss 倒數。
+- P：手動開始 Practice（選擇性）。若目前沒有任務，系統會自動啟動 Practice（自動化學習）。
+- U：升級 Knowledge（消耗目前語言的 Research；不足時會出現英文 toast 提示）。
+- C：結算離線收益（Claim Offline）。
+- 1/2/3：切換語言（Go / Python / JavaScript）。
 
-如遇連線狀態，左側會短暫顯示 Networking...，錯誤則以 Error 行顯示；升級不足會有 toast 提示。
+重要說明：
+
+- 不再需要 F 鍵。任務倒數歸零時會自動嘗試完成（Auto Finish）。
+- Practice 會在無任務時自動啟動（Auto Practice）；P 僅做為備援手動啟動。
+- 任務獎勵歸屬以「任務開始時的語言」為準（HUD 的 Task 卡會顯示 Started: <lang>，若中途切語言則會顯示 now: <lang>）。
+- 左側 Status 以英文顯示，底部 Controls 置中顯示。
+
+提示：
+
+- 任務卡顯示 Base 奬勵與 Duration，右側圓環以 mm:ss 倒數。
+- 右側 Languages 面板會高亮目前語言，並列出各語言的 K/R/Lv 概況。
+- 短暫連線中會顯示 Networking...，錯誤以 Error 行顯示；升級不足顯示英文 toast（例如 Not enough Research to upgrade）。

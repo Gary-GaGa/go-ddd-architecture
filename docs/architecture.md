@@ -65,6 +65,7 @@ sequenceDiagram
 要點：
 - 讀檔後立即執行離線收益（封頂 8 小時）；若時間異常，採保守結算並提示。
 - 存檔以背景執行，避免阻塞 Ebiten Update。
+- Presenter（Ebiten UI）目前提供自動化體驗：無任務自動 Practice、任務倒數結束自動 Finish，並以任務開始時的語言歸屬獎勵（HUD 顯示 Started / now 標示）。
 
 ## 3) 遊戲主迴圈（Update/Draw）
 
