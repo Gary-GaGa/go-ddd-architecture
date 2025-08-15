@@ -119,7 +119,13 @@
 
 ---
 
-如需更詳細的遊戲設計與架構說明，請參考 `docs/game-design.md`。
+如需更詳細的遊戲設計與架構說明，請參考：
+
+- `docs/game-design.md`
+- `docs/architecture.md`
+- `docs/ebiten-integration.md`（Ebiten 作為外部 App，透過後端 Adapter 串接的設計）
+- `docs/http-adapter.md`（HTTP 介面設計：ViewModel 與離線結算端點）
+- `docs/art-style.md`（美術風格與 UI 指南）
 
 ---
 
@@ -183,3 +189,47 @@
 - 啟動與離線收益序列圖
 - Update/Draw 主迴圈與 Advance(Δt) 時間驅動
 - 介面約定、領域模型速覽、離線時間校驗策略
+
+---
+
+## 快速啟動：Server + Ebiten Client
+
+以下步驟會在本機啟動 HTTP 伺服器（預設 `127.0.0.1:8080`）與桌面版 Ebiten Client。
+
+1) 啟動後端伺服器（Cobra CLI）
+
+```bash
+# 在專案根目錄
+go run ./cmd/cli server
+
+# 參數：
+# --mem   使用記憶體儲存庫（預設 true，不落地存檔）
+# --db    指定 bbolt 檔案路徑（需搭配 --mem=false 才會使用）
+# 範例（使用 bbolt 落地存檔）
+# go run ./cmd/cli server --mem=false --db=game.db
+```
+
+2) 啟動 Ebiten Client（桌面視窗）
+
+```bash
+# 方法 A：快速建構與執行
+go run ./client/cmd/ebiten-client
+
+# 方法 B：建構二進位後執行
+go build -o bin/ebiten-client ./client/cmd/ebiten-client
+./bin/ebiten-client
+```
+
+啟動後，視窗左側會顯示資源與任務資訊，右側為語言主題的 AI 視覺區。
+
+### 操作鍵（Controls）
+
+- P：開始練習任務（Practice）
+- F：嘗試完成（Try Finish）
+- U：升級 Knowledge（消耗 Research；不足時會提示）
+- C：結算離線收益（Claim Offline）
+- 1/2/3：切換語言（Go / Python / JavaScript）
+
+提示：左側 Status 卡會顯示 Est. Success（估計成功率）、Rates（每分鐘知識/研發產率）。任務卡會顯示語言、Base 奖勵與總時長，右側圓環以 mm:ss 倒數。
+
+如遇連線狀態，左側會短暫顯示 Networking...，錯誤則以 Error 行顯示；升級不足會有 toast 提示。
