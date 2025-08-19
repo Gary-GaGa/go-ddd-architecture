@@ -75,6 +75,57 @@ func (c *Client) PostStartPractice(ctx context.Context) (ViewModel, error) {
 	return vm, nil
 }
 
+func (c *Client) PostStartTargeted(ctx context.Context) (ViewModel, error) {
+	var vm ViewModel
+	req, _ := http.NewRequestWithContext(ctx, http.MethodPost, c.base+"/api/v1/game/start-targeted", nil)
+	resp, err := c.hc.Do(req)
+	if err != nil {
+		return vm, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode >= 400 {
+		return vm, decodeAPIError(resp)
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&vm); err != nil {
+		return vm, err
+	}
+	return vm, nil
+}
+
+func (c *Client) PostStartDeploy(ctx context.Context) (ViewModel, error) {
+	var vm ViewModel
+	req, _ := http.NewRequestWithContext(ctx, http.MethodPost, c.base+"/api/v1/game/start-deploy", nil)
+	resp, err := c.hc.Do(req)
+	if err != nil {
+		return vm, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode >= 400 {
+		return vm, decodeAPIError(resp)
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&vm); err != nil {
+		return vm, err
+	}
+	return vm, nil
+}
+
+func (c *Client) PostStartResearch(ctx context.Context) (ViewModel, error) {
+	var vm ViewModel
+	req, _ := http.NewRequestWithContext(ctx, http.MethodPost, c.base+"/api/v1/game/start-research", nil)
+	resp, err := c.hc.Do(req)
+	if err != nil {
+		return vm, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode >= 400 {
+		return vm, decodeAPIError(resp)
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&vm); err != nil {
+		return vm, err
+	}
+	return vm, nil
+}
+
 func (c *Client) PostTryFinish(ctx context.Context) (FinishResponse, error) {
 	var out FinishResponse
 	req, _ := http.NewRequestWithContext(ctx, http.MethodPost, c.base+"/api/v1/game/try-finish", nil)
@@ -126,6 +177,46 @@ func (c *Client) PostSelectLanguage(ctx context.Context, lang string) (ViewModel
 		return vm, err
 	}
 	return vm, nil
+}
+
+func (c *Client) PostBuyServer(ctx context.Context) (ViewModel, error) {
+	var vm ViewModel
+	req, _ := http.NewRequestWithContext(ctx, http.MethodPost, c.base+"/api/v1/game/buy-server", nil)
+	resp, err := c.hc.Do(req)
+	if err != nil {
+		return vm, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode >= 400 {
+		return vm, decodeAPIError(resp)
+	}
+	var out struct {
+		ViewModel ViewModel `json:"viewModel"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		return vm, err
+	}
+	return out.ViewModel, nil
+}
+
+func (c *Client) PostBuyGPU(ctx context.Context) (ViewModel, error) {
+	var vm ViewModel
+	req, _ := http.NewRequestWithContext(ctx, http.MethodPost, c.base+"/api/v1/game/buy-gpu", nil)
+	resp, err := c.hc.Do(req)
+	if err != nil {
+		return vm, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode >= 400 {
+		return vm, decodeAPIError(resp)
+	}
+	var out struct {
+		ViewModel ViewModel `json:"viewModel"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		return vm, err
+	}
+	return out.ViewModel, nil
 }
 
 func decodeAPIError(resp *http.Response) error {

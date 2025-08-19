@@ -24,6 +24,11 @@ type Player struct {
 	CurrentLanguage string
 	// Skills 為每個語言的進度。
 	Skills map[string]Skill
+
+	// --- 硬體商店（全域，共用）---
+	// Servers 提供可安裝顯卡的插槽，GPUs 佔用插槽並提升研究基礎產率。
+	Servers int
+	GPUs    int
 }
 
 // Skill 描述單一語言的熟練度與研究點與等級。
@@ -57,12 +62,76 @@ func (p *Player) StartPractice(now time.Time) {
 	}
 	s := p.ensureSkill(lang)
 	// 以研究點數縮短任務時間：最高 30% 縮短（研究達 1000 時達到上限）
-	base := 10 * time.Second
+	base := 5 * time.Second
 	reduction := 0.3 * math.Min(1.0, float64(s.Research)/1000.0)
 	dur := time.Duration(float64(base) * (1.0 - reduction))
 	// 以等級略增獎勵
 	reward := int64(10 + s.Level*2)
-	t := &task.Task{ID: "practice-10s", Type: task.Practice, Language: lang, Duration: dur, BaseReward: reward}
+	t := &task.Task{ID: "practice-5s", Type: task.Practice, Language: lang, Duration: dur, BaseReward: reward}
+	t.Start(now)
+	p.Current = t
+}
+
+// StartTargeted 啟動一個針對當前語言的目標任務：略短時長、略高獎勵。
+func (p *Player) StartTargeted(now time.Time) {
+	if p.Current != nil && p.Current.IsActive() {
+		return
+	}
+	lang := p.CurrentLanguage
+	if lang == "" {
+		lang = "go"
+		p.CurrentLanguage = lang
+	}
+	s := p.ensureSkill(lang)
+	// 以研究點數縮短任務時間：上限 40% 縮短（比 Practice 略高）
+	base := 4 * time.Second
+	reduction := 0.4 * math.Min(1.0, float64(s.Research)/1200.0)
+	dur := time.Duration(float64(base) * (1.0 - reduction))
+	// 獎勵略高於 Practice
+	reward := int64(12 + s.Level*3)
+	t := &task.Task{ID: "targeted-4s", Type: task.Targeted, Language: lang, Duration: dur, BaseReward: reward}
+	t.Start(now)
+	p.Current = t
+}
+
+// StartDeploy 啟動部署任務：中等時長、較高知識獎勵。
+func (p *Player) StartDeploy(now time.Time) {
+	if p.Current != nil && p.Current.IsActive() {
+		return
+	}
+	lang := p.CurrentLanguage
+	if lang == "" {
+		lang = "go"
+		p.CurrentLanguage = lang
+	}
+	s := p.ensureSkill(lang)
+	// 部署：基礎 5s，最高 35% 縮短（研究達 1100）
+	base := 5 * time.Second
+	reduction := 0.35 * math.Min(1.0, float64(s.Research)/1100.0)
+	dur := time.Duration(float64(base) * (1.0 - reduction))
+	reward := int64(14 + s.Level*3)
+	t := &task.Task{ID: "deploy-5s", Type: task.Deploy, Language: lang, Duration: dur, BaseReward: reward}
+	t.Start(now)
+	p.Current = t
+}
+
+// StartResearch 啟動研究任務：時長略長、知識獎勵較溫和（研究獎勵沿用既有邏輯）。
+func (p *Player) StartResearch(now time.Time) {
+	if p.Current != nil && p.Current.IsActive() {
+		return
+	}
+	lang := p.CurrentLanguage
+	if lang == "" {
+		lang = "go"
+		p.CurrentLanguage = lang
+	}
+	s := p.ensureSkill(lang)
+	// 研究：基礎 6s，最高 45% 縮短（研究達 1400）
+	base := 6 * time.Second
+	reduction := 0.45 * math.Min(1.0, float64(s.Research)/1400.0)
+	dur := time.Duration(float64(base) * (1.0 - reduction))
+	reward := int64(9 + s.Level*2)
+	t := &task.Task{ID: "research-6s", Type: task.Research, Language: lang, Duration: dur, BaseReward: reward}
 	t.Start(now)
 	p.Current = t
 }
@@ -82,7 +151,8 @@ func (p *Player) TryFinish(now time.Time) (finished bool, reward int64) {
 	rng := rand.New(rand.NewSource(now.UnixNano()))
 	if rng.Float64() <= prob {
 		// 成功：知識/研究回饋到啟動任務時的語言（多語言獨立累計）。
-		gainedRes := int64(rng.Intn(4)) // 0,1,2,3
+		// Research 獎勵：基礎 0~3，隨顯卡數量將基數平移（例如 1 張顯卡 => 1~4）。
+		gainedRes := int64(rng.Intn(4) + p.GPUs) // [GPUs .. GPUs+3]
 		if taskLang != "" {
 			s := p.ensureSkill(taskLang)
 			s.Knowledge += reward
@@ -148,7 +218,8 @@ func (p *Player) ResearchPerMinute() int64 {
 	level := p.getCurrentLangLevel()
 	base := int64(2)
 	bonus := int64(level)
-	return base + bonus
+	// 顯卡加成：每張顯卡 +GPUBonusRPM
+	return base + bonus + int64(p.GPUs*GPUBonusRPM)
 }
 
 // NextUpgradeCost 計算下一級所需的研究點數（MVP：100 * 2^Level）。
@@ -214,4 +285,55 @@ func (p *Player) getCurrentLangLevel() int {
 		return 0
 	}
 	return s.Level
+}
+
+// --- 商店規則與購買邏輯 ---
+
+const (
+	SlotsPerServer = 2          // 每台伺服器可安裝顯卡數
+	GPUBonusRPM    = 1          // 每張顯卡增加的 Research 每分鐘
+	ServerCostK    = int64(150) // 伺服器主機消耗的 Knowledge
+	GPUCostK       = int64(80)  // 顯卡消耗的 Knowledge
+)
+
+// BuyServer 嘗試購買一台伺服器主機（消耗當前語言的 Knowledge）。
+func (p *Player) BuyServer() bool {
+	lang := p.CurrentLanguage
+	if lang == "" {
+		lang = "go"
+		p.CurrentLanguage = lang
+	}
+	s := p.ensureSkill(lang)
+	if s.Knowledge < ServerCostK {
+		return false
+	}
+	s.Knowledge -= ServerCostK
+	p.Skills[lang] = s
+	p.Servers++
+	return true
+}
+
+// BuyGPU 嘗試購買一張顯卡（需有可用插槽，並消耗 Knowledge）。
+func (p *Player) BuyGPU() bool {
+	// 容量限制：需先有伺服器以提供插槽
+	cap := p.Servers * SlotsPerServer
+	if cap <= 0 {
+		return false
+	}
+	if p.GPUs >= cap {
+		return false
+	}
+	lang := p.CurrentLanguage
+	if lang == "" {
+		lang = "go"
+		p.CurrentLanguage = lang
+	}
+	s := p.ensureSkill(lang)
+	if s.Knowledge < GPUCostK {
+		return false
+	}
+	s.Knowledge -= GPUCostK
+	p.Skills[lang] = s
+	p.GPUs++
+	return true
 }

@@ -66,6 +66,36 @@ func (h *Handler) PostStartPractice(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, h.uc.GetViewModel())
 }
 
+// Start a targeted task immediately (slightly higher reward / shorter duration)
+func (h *Handler) PostStartTargeted(w http.ResponseWriter, r *http.Request) {
+	now := time.Now().UTC()
+	if err := h.uc.StartTargeted(now); err != nil {
+		writeError(w, http.StatusInternalServerError, "internal", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, h.uc.GetViewModel())
+}
+
+// Start a deploy task immediately
+func (h *Handler) PostStartDeploy(w http.ResponseWriter, r *http.Request) {
+	now := time.Now().UTC()
+	if err := h.uc.StartDeploy(now); err != nil {
+		writeError(w, http.StatusInternalServerError, "internal", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, h.uc.GetViewModel())
+}
+
+// Start a research task immediately
+func (h *Handler) PostStartResearch(w http.ResponseWriter, r *http.Request) {
+	now := time.Now().UTC()
+	if err := h.uc.StartResearch(now); err != nil {
+		writeError(w, http.StatusInternalServerError, "internal", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, h.uc.GetViewModel())
+}
+
 // Try to finish current task
 type finishResp struct {
 	Finished  bool             `json:"finished"`
@@ -102,6 +132,31 @@ func (h *Handler) PostSelectLanguage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, h.uc.GetViewModel())
+}
+
+// Buy a server (consumes Knowledge; adds GPU slots)
+type buyResp struct {
+	OK        bool             `json:"ok"`
+	ViewModel dto.ViewModelDto `json:"viewModel"`
+}
+
+func (h *Handler) PostBuyServer(w http.ResponseWriter, r *http.Request) {
+	ok, err := h.uc.BuyServer()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "internal", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, buyResp{OK: ok, ViewModel: h.uc.GetViewModel()})
+}
+
+// Buy a GPU (consumes Knowledge; requires free slot)
+func (h *Handler) PostBuyGPU(w http.ResponseWriter, r *http.Request) {
+	ok, err := h.uc.BuyGPU()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "internal", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, buyResp{OK: ok, ViewModel: h.uc.GetViewModel()})
 }
 
 // --- shared helpers (local to game module) ---
