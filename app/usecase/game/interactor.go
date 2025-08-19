@@ -101,12 +101,34 @@ func (uc *Interactor) GetViewModel() dto.ViewModelDto {
 			vm.Languages[k] = dto.LanguageStats{Knowledge: s.Knowledge, Research: s.Research, Level: s.Level}
 		}
 	}
+	// 商店/硬體資訊
+	vm.Servers = uc.p.Servers
+	vm.GPUs = uc.p.GPUs
+	vm.Slots = uc.p.Servers * player.SlotsPerServer
 	return vm
 }
 
 // StartPractice 啟動練習任務
 func (uc *Interactor) StartPractice(now time.Time) error {
 	uc.p.StartPractice(now)
+	return uc.repo.Save(uc.p, uc.ts)
+}
+
+// StartTargeted 啟動目標任務
+func (uc *Interactor) StartTargeted(now time.Time) error {
+	uc.p.StartTargeted(now)
+	return uc.repo.Save(uc.p, uc.ts)
+}
+
+// StartDeploy 啟動部署任務
+func (uc *Interactor) StartDeploy(now time.Time) error {
+	uc.p.StartDeploy(now)
+	return uc.repo.Save(uc.p, uc.ts)
+}
+
+// StartResearch 啟動研究任務
+func (uc *Interactor) StartResearch(now time.Time) error {
+	uc.p.StartResearch(now)
 	return uc.repo.Save(uc.p, uc.ts)
 }
 
@@ -135,4 +157,28 @@ func (uc *Interactor) UpgradeKnowledge() (ok bool, err error) {
 func (uc *Interactor) SelectLanguage(lang string) error {
 	uc.p.SelectLanguage(lang)
 	return uc.repo.Save(uc.p, uc.ts)
+}
+
+// BuyServer 購買伺服器主機（佔用 Knowledge，提供顯卡插槽）
+func (uc *Interactor) BuyServer() (bool, error) {
+	ok := uc.p.BuyServer()
+	if !ok {
+		return false, nil
+	}
+	if err := uc.repo.Save(uc.p, uc.ts); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+// BuyGPU 購買顯卡（需有插槽，佔用 Knowledge，提升研究產率）
+func (uc *Interactor) BuyGPU() (bool, error) {
+	ok := uc.p.BuyGPU()
+	if !ok {
+		return false, nil
+	}
+	if err := uc.repo.Save(uc.p, uc.ts); err != nil {
+		return false, err
+	}
+	return true, nil
 }

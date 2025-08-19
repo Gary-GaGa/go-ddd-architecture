@@ -6,7 +6,6 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
-	"github.com/hajimehoshi/ebiten/v2/text"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"golang.org/x/image/font"
 )
@@ -81,9 +80,8 @@ func DrawEvolvingAI(screen *ebiten.Image, face font.Face, x, y, w, h int, _ int6
 		if tag == "" {
 			tag = "go"
 		}
-		bounds, _ := font.BoundString(face, tag)
 		padX, padY := 6, 4
-		textW := int((bounds.Max.X - bounds.Min.X).Ceil())
+		textW := textWidth(face, tag)
 		textH := 14
 		tw := textW + padX*2
 		th := textH + padY*2
@@ -91,7 +89,7 @@ func DrawEvolvingAI(screen *ebiten.Image, face font.Face, x, y, w, h int, _ int6
 		tagY := y + h - th - 8
 		drawRoundedFilledRect(screen, tagX, tagY, tw, th, 6, Theme.CardBorder)
 		drawRoundedFilledRect(screen, tagX+1, tagY+1, tw-2, th-2, 5, pal.LabelBg)
-		text.Draw(screen, tag, face, tagX+padX, tagY+padY+12, color.Black)
+		drawText(screen, face, tag, tagX+padX, tagY+padY+12, color.RGBA{0, 0, 0, 255})
 	}
 }
 

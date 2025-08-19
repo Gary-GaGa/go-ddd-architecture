@@ -17,6 +17,11 @@ type ViewModelDto struct {
 	Languages map[string]LanguageStats
 	// 任務成功率預估（0~1），以目前語言計算
 	EstimatedSuccess float64
+
+	// --- Store / Hardware ---
+	Servers int
+	GPUs    int
+	Slots   int // total slots = Servers * SlotsPerServer
 }
 
 type TaskInfo struct {

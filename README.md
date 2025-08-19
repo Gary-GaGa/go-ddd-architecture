@@ -225,11 +225,32 @@ go build -o bin/ebiten-client ./client/cmd/ebiten-client
 ### 操作鍵（Controls）
 
 - P：開始練習任務（Practice）
-- F：嘗試完成（Try Finish）
+- T：開始 Targeted 任務（短時、略高獎勵）
 - U：升級 Knowledge（消耗 Research；不足時會提示）
 - C：結算離線收益（Claim Offline）
 - 1/2/3：切換語言（Go / Python / JavaScript）
 
-提示：左側 Status 卡會顯示 Est. Success（估計成功率）、Rates（每分鐘知識/研發產率）。任務卡會顯示語言、Base 奖勵與總時長，右側圓環以 mm:ss 倒數。
+任務行為：
+
+- 當沒有進行中任務時，會自動開始練習（Practice）。
+- 任務倒數至 0 後，會自動嘗試結算（Try Finish），不用手動按鍵。
+
+提示：
+
+- 左側 Status 卡會顯示 Est. Success（估計成功率）、Rates（每分鐘知識/研發產率）。
+- 中央任務卡會顯示語言、Base 奬勵與總時長，右側圓環以 mm:ss 倒數。
+- 中央任務卡背景有淡藍藍圖格線與任務型別標籤（Practice/Targeted）。
+- 右側 Languages 面板每列提供升級進度條（Research / Next Cost），並在可升級時顯示 READY 徽章；當前選中的語言以強調色顯示。
 
 如遇連線狀態，左側會短暫顯示 Networking...，錯誤則以 Error 行顯示；升級不足會有 toast 提示。
+
+---
+
+## License
+
+This project is licensed under the MIT License. See the `LICENSE` file for details.
+
+## Disclaimer
+
+Some game mechanics or ideas are inspired by existing idle/incremental games.  
+This project is non-commercial and created for educational purposes only.  

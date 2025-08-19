@@ -15,6 +15,10 @@ type ViewModel struct {
 	CurrentLanguage  string            `json:"CurrentLanguage"`
 	Languages        map[string]LangVM `json:"Languages"`
 	EstimatedSuccess float64           `json:"EstimatedSuccess"`
+	// Store
+	Servers int `json:"Servers"`
+	GPUs    int `json:"GPUs"`
+	Slots   int `json:"Slots"`
 }
 
 type Task struct {

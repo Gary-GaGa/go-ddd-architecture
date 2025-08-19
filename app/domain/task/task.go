@@ -6,6 +6,9 @@ type Type string
 
 const (
 	Practice Type = "Practice"
+	Targeted Type = "Targeted"
+	Deploy   Type = "Deploy"
+	Research Type = "Research"
 )
 
 type Task struct {
