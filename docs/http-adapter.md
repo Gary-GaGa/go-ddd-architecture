@@ -4,16 +4,18 @@
 
 ## 目標
 - 提供最小 API（已實作，採用版本化前綴 /api/v1）：
-  - GET /api/v1/game/viewmodel 取得展示資料
-  - POST /api/v1/game/claim-offline 結算離線收益
-  - POST /api/v1/game/start-practice 開始練習任務
-  - POST /api/v1/game/try-finish 嘗試完成當前任務
+  - GET  /api/v1/game/viewmodel         取得展示資料
+  - POST /api/v1/game/claim-offline     結算離線收益
+  - POST /api/v1/game/start-practice    開始練習任務
+  - POST /api/v1/game/start-deploy      開始 Deploy 任務
+  - POST /api/v1/game/start-research    開始 Research 任務
+  - POST /api/v1/game/try-finish        嘗試完成當前任務
 - 可選擴充：模擬時間與回推關閉時間（便於測試/開發）
 - 簡單、無認證（本地開發用），未來可加上 Token 或 IPC
 
 ## 端點設計
 
-> 相容策略：暫時保留舊版 /api/* 路徑作為過渡（與 /api/v1/* 同義）。
+> 相容策略：暫時保留舊版 /api/* 路徑作為過渡（與 /api/v1/* 同義），例如 /api/game/start-deploy、/api/game/start-research。
 
 ## Middleware
 - Request ID：每個請求在 Header X-Request-Id 傳遞，若未提供則由伺服器產生。
@@ -67,6 +69,14 @@
 - 說明：立即開始一個練習任務（固定示範型）。
 - 回傳：200 JSON，最新 ViewModel（含 currentTask）。
 
+### POST /api/v1/game/start-deploy
+- 說明：立即開始 Deploy 任務（依據語言/研究加成計算時長與獎勵）。
+- 回傳：200 JSON，最新 ViewModel（含 currentTask）。
+
+### POST /api/v1/game/start-research
+- 說明：立即開始 Research 任務（依據語言/加成計算）。
+- 回傳：200 JSON，最新 ViewModel（含 currentTask）。
+
 ### POST /api/v1/game/try-finish
 - 說明：嘗試完成當前任務；若尚未到時間，回傳 finished=false。
 - 回傳 200 JSON：
@@ -115,8 +125,8 @@
 ## 佈署與開發
 - 本地開發：在 `cmd/server` 下掛載 HTTP 路由：
   - HTTP 伺服器與路由位於 `app/adapter/httpserver`：
-    - `handler.go`：依賴 port/in Usecase 與 DTO
-    - `routes.go`：註冊 /api/v1/* 路徑，並保留 /api/* 相容
+  - `handler.go`：依賴 port/in Usecase 與 DTO（含 deploy/research handler）
+  - `routes.go`：註冊 /api/v1/* 路徑，並保留 /api/* 相容（含 start-deploy/start-research）
     - `middleware.go`：Request ID、Recovery、AccessLog
     - `server.go`：Start/Shutdown 包裝
 - 與 fx 結合：在 `cmd/server.go` 的 `fx.New(...)` 中 Provide 必要元件與 Invoke 啟動 HTTP。
