@@ -1,10 +1,10 @@
-# Ebiten × 後端 Adapter 串接設計（外部 App 方案）
+# Ebiten × 後端 Adapter 串接設計（外部 App + 本地 HTTP）
 
 本文件說明：將 Ebiten 作為「外部桌面 App」，不直接內嵌於後端程式碼；透過後端 Adapter（HTTP/JSON 為主，日後可升級 gRPC/WebSocket）與 Usecase Port 串接，達到清晰分層與良好延展性。
 
 ## 1) 定位與原則
 
-- Ebiten：僅負責輸入/渲染與畫面狀態管理（Presenter/UI），不實作業務規則。
+- Ebiten：僅負責輸入/渲染與畫面狀態管理（Presenter/UI），不實作業務規則；現為獨立客戶端 `client/cmd/ebiten-client`。
 - 後端（本專案）：
   - Domain：純邏輯（Player/Resource/Gametime/...），不依賴外部技術。
   - Usecase：以 Port（Input/Output）協調流程，對 UI 暴露意圖型呼叫與 ViewModel。
@@ -55,11 +55,16 @@ cmd/
   - 動作：強制執行離線收益（通常啟動後自動，不需頻繁呼叫）。
   - 回應：{ gainedKnowledge: int64, gainedResearch: int64, clampedTo8h: bool, anomalyDetected: bool, message?: string }
 
-- GET `/v1/game/view-model`
+- GET `/api/v1/game/viewmodel`
   - 動作：取得當前 ViewModel（資源、提示、練習/任務狀態等）。
   - 回應：{ resources: { knowledge, research }, notices: [string], practice?: { language, level, xp, remainingSeconds? } }
 
--（M2+）POST `/v1/game/start-practice`
+- POST `/api/v1/game/start-practice`
+  - 動作：開始練習（Practice）
+- POST `/api/v1/game/start-deploy`
+  - 動作：開始 Deploy 任務
+- POST `/api/v1/game/start-research`
+  - 動作：開始 Research 任務
   - body：{ language: string, durationSeconds: int }
   - 動作：開始練習，後端內部以「開始時間 + 速度」做函式性進度推算。
 
@@ -74,12 +79,12 @@ cmd/
 ## 4) 啟動與主迴圈（UI 側）
 
 1. Ebiten App 啟動：
-   - 呼叫 POST /v1/game/init → 後端載入 + ClaimOffline。
-   - 呼叫 GET /v1/game/view-model → 若有離線收益，Presenter 顯示提示彈窗。
+  - 呼叫 POST /api/v1/game/claim-offline → 後端載入 + ClaimOffline（或啟動後自動觸發）。
+  - 呼叫 GET /api/v1/game/viewmodel → 若有離線收益，Presenter 顯示提示。
 2. Update/Draw 主迴圈：
-   - Update：處理鍵鼠輸入，對應動作發送 POST（StartPractice/Solve/...）。
+  - Update：處理鍵鼠輸入，對應動作發送 POST（StartPractice/StartDeploy/StartResearch/TryFinish）。
    - ViewModel 取得：每 0.5～1 秒輪詢 GET /view-model（或升級 WebSocket/SSE 推送）。
-   - Draw：依 ViewModel 與 UI 狀態渲染。
+  - Draw：依 ViewModel 與 UI 狀態渲染。任務區使用 Renderer 介面（Practice/Deploy/Research 三種視覺）。
 3. 結束：後端會自行背景保存（去抖動），無需 UI 強制同步等待。
 
 ## 5) 時間與平行處理（Concurrency）策略
@@ -91,7 +96,7 @@ cmd/
 
 ## 6) 測試與品質
 
-- Domain/Usecase：單元/端對端測試（已建立離線收益與 8 小時上限）。
+- Domain/Usecase：單元/端對端測試（已建立離線收益與 8 小時上限；Deploy/Research 端點已串）。
 - Adapter(HTTP)：使用 `httptest` 做 handler 測試，含序列化、錯誤碼與路由。
 - 契約一致性：可附上 OpenAPI（可選），或在前端 repo 放小型 client + smoke 測試。
 - 品質關卡：`go test ./...` 全綠、無循環相依、文件與 README 同步。

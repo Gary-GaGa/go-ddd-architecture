@@ -1,4 +1,4 @@
-# 架構草圖（Clean Architecture × Ebiten Presenter × 離線存檔）
+# 架構草圖（Clean Architecture × Ebiten Presenter × 本地 HTTP + 離線存檔）
 
 本文提供專案的高階原理圖、序列圖與資料流，協助各層分工與實作落地。
 
@@ -8,14 +8,14 @@
 flowchart LR
   %% Presentation / Adapter
   subgraph A[Adapter / Presenter]
-    CLI[CLI] --- PUI[Ebiten UI]
+    CLI[CLI] --- PUI[Ebiten UI (外部客戶端)]
     PUI -->|輸入事件/Render| PRES[Presenter]
     CLI --> PRES
   end
 
   %% Usecase
   subgraph U[Usecase]
-    PORT[Usecase Port\n(例如: StartPractice/Advance/ClaimOffline/GetViewModel)]
+    PORT[Usecase Port\n(例如: StartPractice/StartDeploy/StartResearch/TryFinish/Advance/ClaimOffline/GetViewModel)]
   end
 
   %% Domain
@@ -38,13 +38,14 @@ flowchart LR
 ```
 
 - Ebiten 只負責輸入/渲染，由 Presenter 轉為 Usecase Port 呼叫；Domain 保持純邏輯。
-- 資料存取走 Repository 介面，Infra 提供 bbolt 實作；Clock 以介面注入，利於測試與離線時間計算。
+- 目前 UI 以獨立客戶端（`client/cmd/ebiten-client`）透過本地 HTTP（`127.0.0.1:8080`）呼叫 Adapter。
+- 資料存取走 Repository 介面，Infra 提供 bbolt/Memory 實作；Clock 以介面注入，利於測試與離線時間計算。
 
 ## 2) 啟動與離線收益序列圖
 
 ```mermaid
 sequenceDiagram
-  participant App as cmd/desktop (Ebiten)
+  participant App as client/ebiten (Ebiten)
   participant PRES as Presenter
   participant UC as Usecase (Port)
   participant REPO as Repository (bbolt)
@@ -88,9 +89,11 @@ sequenceDiagram
 
 ## 4) 介面約定（簡述）
 
-- Usecase Input Port（例）：
-  - StartPractice(lang, duration)
-  - StartSolve(taskID)
+- Usecase Input Port（例，現況）：
+  - StartPractice(lang)
+  - StartDeploy(lang)
+  - StartResearch(lang)
+  - TryFinish()
   - Advance(dt)
   - ClaimOffline(now)
   - GetViewModel() → ViewModel
@@ -103,7 +106,7 @@ sequenceDiagram
 - ViewModel（例）：
   - 資源：知識點、研發點
   - 語言：等級、XP、下一級需求
-  - 任務：當前任務、剩餘時間
+  - 任務：當前任務（Practice/Deploy/Research）、總時長與剩餘時間、獎勵提示
   - 訊息：離線收益提示/時間異常提示
 
 ## 5) 領域模型速覽（MVP）
@@ -153,15 +156,16 @@ classDiagram
   - offlineSeconds = clamp(now - wallClockAtClose, 0..8h)
   - 若與 elapsedMonotonic 期望值嚴重不符 → 採保守結算並提示
 
-## 7) 目錄對應
+## 7) 目錄對應（現況）
 
 ```
-/domain       # 純領域邏輯
-/usecase      # Usecase/Port 與流程協調
-/adapter      # Presenter(UI)、Repo 介面實作
-/infra        # bbolt、Clock 等技術細節
-/cmd/cli      # CLI 入口（保留 smoke test）
-/cmd/desktop  # Ebiten 入口與 wiring
+/app          # Application 層與 Adapter（HTTP）
+/app/adapter/in/httpserver   # HTTP Adapter（Router/Handler）
+/app/usecase  # Usecase/Port 與流程協調
+/app/domain   # 純領域邏輯
+/infra        # （如有）底層技術細節
+/cmd          # 伺服器啟動（Cobra）
+/client/cmd/ebiten-client  # Ebiten 客戶端入口
 ```
 
 以上為實作指引，細節可依 MVP 推進逐步落地與調整。
