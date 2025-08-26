@@ -118,20 +118,44 @@
 
 ## MVP 里程碑與開發任務
 
-### MVP 目標（2 週內可玩）
-- Go/Python 兩條語言
-- 練習任務與解題任務
-- 知識點與研發點資源系統
-- 升級語言等級
-- 離線收益上限 8 小時
-- bbolt 儲存
-- CLI 與 Ebitengine 簡易 UI
- - 純本地時間校驗（wall-clock + 單調時間代理值），偵測時間異常時採保守結算並提示
+### MVP 目標（現況與進度）
+
+- [x] 多任務型別：Practice / Deploy / Research
+- [x] 任務行為：空閒自動 Practice、倒數結束自動 Try Finish
+- [x] 任務佇列 intent：D/R 在任務進行中會佇列，完成後自動啟動
+- [x] 資源系統：Knowledge / Research，並顯示每分鐘產率
+- [x] 語言：Go / Python / JavaScript 切換；排序 F/V/K；升級（消耗 Research）
+- [x] 底部熱鍵列：最小化，依寬度自適應
+- [x] 商店：Servers / GPUs 滑鼠購買
+- [x] 離線收益：上限 8 小時；啟動自動 Claim，亦可手動（C）
+- [x] 執行架構：Server + Ebiten Client（本地 HTTP Adapter）
+- [-] 設計：隨機事件「市場波動」（價格 ±%）— 文件規劃完成，尚未實作
+- [-] 設計：GPU 等級（2090/3090/4090/5090）— 文件規劃完成，尚未實作
 
 ### 開發任務
-- Sprint 0：建立 Domain 模型與用例、離線收益計算、bbolt 儲存庫實作、CLI 介面、單元測試。
-- Sprint 1：Ebitengine 桌面版主迴圈（Update/Draw）、UI Presenter、按鍵互動、存讀檔整合。
-- 驗收標準：啟動可查看資源與任務狀態、開始任務並完成獲獎、升級語言後產出變化、離線收益正確計算並受 8 小時限制、存檔可於關閉後重啟讀取、時間逆轉/異常跳動時離線收益採保守結算並提示。
+
+- 已完成
+  - Usecase/Port/DTO 與 HTTP Adapter（/api/v1/game/*）
+  - Ebiten Client：按鍵互動（P/D/R/Y/U/C/1/2/3、F/V/K）與 HUD Renderer（Practice/Deploy/Research）
+  - ViewModel 擴充：語言統計、成功率預估、商店資訊、產率顯示
+  - 離線收益計算與上限、啟動流程整合
+- 進行中 / 待辦
+  - 技能樹面板與被動加成
+  - 語言循序解鎖與多線訓練規範
+  - 任務日誌與優先設定
+  - 隨機事件（市場波動）與 GPU 等級的程式化
+  - 專用離線收益彈窗與異常時間提示 UX
+  - 自動化測試與覆蓋率提升
+
+### 驗收標準（MVP）
+
+- 啟動後可透過 Client 檢視資源、產率、語言面板與商店小卡
+- 可用 P/D/R 開始任務；進行中按 D/R 會佇列 intent，完成後自動切換
+- 無任務時自動開始 Practice；任務結束自動 Try Finish 結算
+- 語言升級會反映於產率/任務預估；F/V/K 排序生效
+- 可購買 Servers/GPUs，並即時反映於 ViewModel 與 HUD
+- 離線收益正確計算且受 8 小時限制；時間異常時採保守結算並提示
+- 存檔可於關閉後重啟讀取
 
 ## 專案目錄規劃（MVP 階段）
 
