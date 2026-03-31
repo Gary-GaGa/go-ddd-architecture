@@ -1,5 +1,15 @@
 package game
 
+// OfflineResultDto 是 domain.OfflineResult 的 DTO 表示，
+// 讓 Adapter 層不需直接 import domain/gametime。
+type OfflineResultDto struct {
+	GainedKnowledge int64  `json:"gainedKnowledge"`
+	GainedResearch  int64  `json:"gainedResearch"`
+	ClampedTo8h     bool   `json:"clampedTo8h"`
+	AnomalyDetected bool   `json:"anomalyDetected"`
+	Message         string `json:"message,omitempty"`
+}
+
 // ViewModelDto 為最小展示資料，用於 CLI/UI。
 type ViewModelDto struct {
 	Knowledge       int64

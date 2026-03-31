@@ -51,15 +51,12 @@ func (p *Player) ApplyOfflineGains(knowledge, research int64, now time.Time) {
 }
 
 // StartPractice 啟動一個固定設定的練習任務（MVP）。
-func (p *Player) StartPractice(now time.Time) {
+// 若已有進行中的任務，回傳 ErrTaskAlreadyActive。
+func (p *Player) StartPractice(now time.Time) error {
 	if p.Current != nil && p.Current.IsActive() {
-		return
+		return ErrTaskAlreadyActive
 	}
-	lang := p.CurrentLanguage
-	if lang == "" {
-		lang = "go" // 預設一個語言，避免空值
-		p.CurrentLanguage = lang
-	}
+	lang := p.activeLang()
 	s := p.ensureSkill(lang)
 	// 以研究點數縮短任務時間：最高 30% 縮短（研究達 1000 時達到上限）
 	base := 5 * time.Second
@@ -70,18 +67,16 @@ func (p *Player) StartPractice(now time.Time) {
 	t := &task.Task{ID: "practice-5s", Type: task.Practice, Language: lang, Duration: dur, BaseReward: reward}
 	t.Start(now)
 	p.Current = t
+	return nil
 }
 
 // StartTargeted 啟動一個針對當前語言的目標任務：略短時長、略高獎勵。
-func (p *Player) StartTargeted(now time.Time) {
+// 若已有進行中的任務，回傳 ErrTaskAlreadyActive。
+func (p *Player) StartTargeted(now time.Time) error {
 	if p.Current != nil && p.Current.IsActive() {
-		return
+		return ErrTaskAlreadyActive
 	}
-	lang := p.CurrentLanguage
-	if lang == "" {
-		lang = "go"
-		p.CurrentLanguage = lang
-	}
+	lang := p.activeLang()
 	s := p.ensureSkill(lang)
 	// 以研究點數縮短任務時間：上限 40% 縮短（比 Practice 略高）
 	base := 4 * time.Second
@@ -92,18 +87,16 @@ func (p *Player) StartTargeted(now time.Time) {
 	t := &task.Task{ID: "targeted-4s", Type: task.Targeted, Language: lang, Duration: dur, BaseReward: reward}
 	t.Start(now)
 	p.Current = t
+	return nil
 }
 
 // StartDeploy 啟動部署任務：中等時長、較高知識獎勵。
-func (p *Player) StartDeploy(now time.Time) {
+// 若已有進行中的任務，回傳 ErrTaskAlreadyActive。
+func (p *Player) StartDeploy(now time.Time) error {
 	if p.Current != nil && p.Current.IsActive() {
-		return
+		return ErrTaskAlreadyActive
 	}
-	lang := p.CurrentLanguage
-	if lang == "" {
-		lang = "go"
-		p.CurrentLanguage = lang
-	}
+	lang := p.activeLang()
 	s := p.ensureSkill(lang)
 	// 部署：基礎 5s，最高 35% 縮短（研究達 1100）
 	base := 5 * time.Second
@@ -113,18 +106,16 @@ func (p *Player) StartDeploy(now time.Time) {
 	t := &task.Task{ID: "deploy-5s", Type: task.Deploy, Language: lang, Duration: dur, BaseReward: reward}
 	t.Start(now)
 	p.Current = t
+	return nil
 }
 
 // StartResearch 啟動研究任務：時長略長、知識獎勵較溫和（研究獎勵沿用既有邏輯）。
-func (p *Player) StartResearch(now time.Time) {
+// 若已有進行中的任務，回傳 ErrTaskAlreadyActive。
+func (p *Player) StartResearch(now time.Time) error {
 	if p.Current != nil && p.Current.IsActive() {
-		return
+		return ErrTaskAlreadyActive
 	}
-	lang := p.CurrentLanguage
-	if lang == "" {
-		lang = "go"
-		p.CurrentLanguage = lang
-	}
+	lang := p.activeLang()
 	s := p.ensureSkill(lang)
 	// 研究：基礎 6s，最高 45% 縮短（研究達 1400）
 	base := 6 * time.Second
@@ -134,6 +125,7 @@ func (p *Player) StartResearch(now time.Time) {
 	t := &task.Task{ID: "research-6s", Type: task.Research, Language: lang, Duration: dur, BaseReward: reward}
 	t.Start(now)
 	p.Current = t
+	return nil
 }
 
 // TryFinish 嘗試完成當前任務，若完成則結算獎勵。
@@ -234,22 +226,18 @@ func (p *Player) NextUpgradeCost() int64 {
 }
 
 // UpgradeKnowledge 嘗試進行升級：扣除當前語言的研究點，Level+1（各語言獨立）。
-func (p *Player) UpgradeKnowledge() bool {
+// 研究點不足時回傳 ErrInsufficientResearch。
+func (p *Player) UpgradeKnowledge() error {
 	cost := p.NextUpgradeCost()
-	// 從當前語言的研究點扣款（並維持全域相容：同步扣全域錢包）。
-	lang := p.CurrentLanguage
-	if lang == "" {
-		lang = "go"
-		p.CurrentLanguage = lang
-	}
+	lang := p.activeLang()
 	s := p.ensureSkill(lang)
 	if s.Research < cost {
-		return false
+		return ErrInsufficientResearch
 	}
 	s.Research -= cost
 	s.Level++
 	p.Skills[lang] = s
-	return true
+	return nil
 }
 
 // SelectLanguage 設定當前語言；若尚未存在則初始化技能。
@@ -259,6 +247,19 @@ func (p *Player) SelectLanguage(lang string) {
 	}
 	_ = p.ensureSkill(lang)
 	p.CurrentLanguage = lang
+}
+
+// defaultLanguage 是當玩家尚未選擇語言時的預設值。
+const defaultLanguage = "go"
+
+// activeLang 回傳當前語言；若未設定則初始化為 defaultLanguage。
+// 這是所有需要「當前語言」操作的單一入口，避免重複的 guard clause。
+func (p *Player) activeLang() string {
+	if p.CurrentLanguage == "" {
+		p.CurrentLanguage = defaultLanguage
+		_ = p.ensureSkill(p.CurrentLanguage)
+	}
+	return p.CurrentLanguage
 }
 
 func (p *Player) ensureSkill(lang string) Skill {
@@ -297,43 +298,34 @@ const (
 )
 
 // BuyServer 嘗試購買一台伺服器主機（消耗當前語言的 Knowledge）。
-func (p *Player) BuyServer() bool {
-	lang := p.CurrentLanguage
-	if lang == "" {
-		lang = "go"
-		p.CurrentLanguage = lang
-	}
+// 知識點不足時回傳 ErrInsufficientKnowledge。
+func (p *Player) BuyServer() error {
+	lang := p.activeLang()
 	s := p.ensureSkill(lang)
 	if s.Knowledge < ServerCostK {
-		return false
+		return ErrInsufficientKnowledge
 	}
 	s.Knowledge -= ServerCostK
 	p.Skills[lang] = s
 	p.Servers++
-	return true
+	return nil
 }
 
 // BuyGPU 嘗試購買一張顯卡（需有可用插槽，並消耗 Knowledge）。
-func (p *Player) BuyGPU() bool {
+// 無插槽時回傳 ErrNoSlotAvailable；知識點不足時回傳 ErrInsufficientKnowledge。
+func (p *Player) BuyGPU() error {
 	// 容量限制：需先有伺服器以提供插槽
-	cap := p.Servers * SlotsPerServer
-	if cap <= 0 {
-		return false
+	slots := p.Servers * SlotsPerServer
+	if slots <= 0 || p.GPUs >= slots {
+		return ErrNoSlotAvailable
 	}
-	if p.GPUs >= cap {
-		return false
-	}
-	lang := p.CurrentLanguage
-	if lang == "" {
-		lang = "go"
-		p.CurrentLanguage = lang
-	}
+	lang := p.activeLang()
 	s := p.ensureSkill(lang)
 	if s.Knowledge < GPUCostK {
-		return false
+		return ErrInsufficientKnowledge
 	}
 	s.Knowledge -= GPUCostK
 	p.Skills[lang] = s
 	p.GPUs++
-	return true
+	return nil
 }
