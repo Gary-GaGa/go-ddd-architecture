@@ -1,8 +1,6 @@
 module go-ddd-architecture
 
-go 1.23.0
-
-toolchain go1.24.0
+go 1.25.0
 
 require (
 	github.com/hajimehoshi/ebiten/v2 v2.8.8
@@ -10,7 +8,7 @@ require (
 	go.etcd.io/bbolt v1.4.2
 	go.uber.org/fx v1.19.3
 	go.uber.org/zap v1.23.0
-	golang.org/x/image v0.30.0
+	golang.org/x/image v0.38.0
 )
 
 require (
@@ -24,7 +22,7 @@ require (
 	go.uber.org/atomic v1.7.0 // indirect
 	go.uber.org/dig v1.16.1 // indirect
 	go.uber.org/multierr v1.6.0 // indirect
-	golang.org/x/sync v0.16.0 // indirect
+	golang.org/x/sync v0.20.0 // indirect
 	golang.org/x/sys v0.29.0 // indirect
-	golang.org/x/text v0.28.0 // indirect
+	golang.org/x/text v0.35.0 // indirect
 )
