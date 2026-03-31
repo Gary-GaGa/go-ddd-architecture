@@ -45,14 +45,20 @@ func (uc *Interactor) Initialize() error {
 	return nil
 }
 
-func (uc *Interactor) ClaimOffline(now time.Time) (gametime.OfflineResult, error) {
+func (uc *Interactor) ClaimOffline(now time.Time) (dto.OfflineResultDto, error) {
 	res := uc.calc.Compute(&uc.p, uc.ts, now)
 	// 更新 timestamps 的關閉時間供下次計算
 	uc.ts.WallClockAtClose = now
 	if err := uc.repo.Save(uc.p, uc.ts); err != nil {
-		return res, err
+		return dto.OfflineResultDto{}, err
 	}
-	return res, nil
+	return dto.OfflineResultDto{
+		GainedKnowledge: res.GainedKnowledge,
+		GainedResearch:  res.GainedResearch,
+		ClampedTo8h:     res.ClampedTo8h,
+		AnomalyDetected: res.AnomalyDetected,
+		Message:         res.Message,
+	}, nil
 }
 
 func (uc *Interactor) GetViewModel() dto.ViewModelDto {
@@ -142,15 +148,11 @@ func (uc *Interactor) TryFinish(now time.Time) (finished bool, reward int64, err
 }
 
 // UpgradeKnowledge 升級等級，扣除研究。
-func (uc *Interactor) UpgradeKnowledge() (ok bool, err error) {
-	ok = uc.p.UpgradeKnowledge()
-	if !ok {
-		return false, nil
+func (uc *Interactor) UpgradeKnowledge() error {
+	if err := uc.p.UpgradeKnowledge(); err != nil {
+		return err
 	}
-	if err = uc.repo.Save(uc.p, uc.ts); err != nil {
-		return false, err
-	}
-	return true, nil
+	return uc.repo.Save(uc.p, uc.ts)
 }
 
 // SelectLanguage 設定目前操作的語言
@@ -160,25 +162,17 @@ func (uc *Interactor) SelectLanguage(lang string) error {
 }
 
 // BuyServer 購買伺服器主機（佔用 Knowledge，提供顯卡插槽）
-func (uc *Interactor) BuyServer() (bool, error) {
-	ok := uc.p.BuyServer()
-	if !ok {
-		return false, nil
+func (uc *Interactor) BuyServer() error {
+	if err := uc.p.BuyServer(); err != nil {
+		return err
 	}
-	if err := uc.repo.Save(uc.p, uc.ts); err != nil {
-		return false, err
-	}
-	return true, nil
+	return uc.repo.Save(uc.p, uc.ts)
 }
 
 // BuyGPU 購買顯卡（需有插槽，佔用 Knowledge，提升研究產率）
-func (uc *Interactor) BuyGPU() (bool, error) {
-	ok := uc.p.BuyGPU()
-	if !ok {
-		return false, nil
+func (uc *Interactor) BuyGPU() error {
+	if err := uc.p.BuyGPU(); err != nil {
+		return err
 	}
-	if err := uc.repo.Save(uc.p, uc.ts); err != nil {
-		return false, err
-	}
-	return true, nil
+	return uc.repo.Save(uc.p, uc.ts)
 }

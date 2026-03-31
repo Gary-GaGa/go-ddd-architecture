@@ -1,6 +1,9 @@
 package task
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 type Type string
 
@@ -48,4 +51,45 @@ func (t *Task) RemainingSeconds(at time.Time) int64 {
 		return 0
 	}
 	return int64(d / time.Second)
+}
+
+// taskJSON 是序列化用的 surrogate struct，讓 unexported 欄位可以持久化。
+type taskJSON struct {
+	ID         string        `json:"id"`
+	Type       Type          `json:"type"`
+	Language   string        `json:"language"`
+	Duration   time.Duration `json:"duration"`
+	BaseReward int64         `json:"baseReward"`
+	StartedAt  time.Time     `json:"startedAt"`
+	DoneAt     time.Time     `json:"doneAt"`
+	Active     bool          `json:"active"`
+}
+
+func (t Task) MarshalJSON() ([]byte, error) {
+	return json.Marshal(taskJSON{
+		ID:         t.ID,
+		Type:       t.Type,
+		Language:   t.Language,
+		Duration:   t.Duration,
+		BaseReward: t.BaseReward,
+		StartedAt:  t.startedAt,
+		DoneAt:     t.doneAt,
+		Active:     t.active,
+	})
+}
+
+func (t *Task) UnmarshalJSON(data []byte) error {
+	var j taskJSON
+	if err := json.Unmarshal(data, &j); err != nil {
+		return err
+	}
+	t.ID = j.ID
+	t.Type = j.Type
+	t.Language = j.Language
+	t.Duration = j.Duration
+	t.BaseReward = j.BaseReward
+	t.startedAt = j.StartedAt
+	t.doneAt = j.DoneAt
+	t.active = j.Active
+	return nil
 }

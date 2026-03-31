@@ -2,12 +2,13 @@ package game
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"time"
 
 	"go.uber.org/zap"
 
-	"go-ddd-architecture/app/domain/gametime"
+	"go-ddd-architecture/app/domain/player"
 	dto "go-ddd-architecture/app/usecase/dto/game"
 	inPort "go-ddd-architecture/app/usecase/port/in/game"
 )
@@ -29,8 +30,8 @@ type claimReq struct {
 }
 
 type claimResp struct {
-	Result    gametime.OfflineResult `json:"result"`
-	ViewModel dto.ViewModelDto       `json:"viewModel"`
+	Result    dto.OfflineResultDto `json:"result"`
+	ViewModel dto.ViewModelDto     `json:"viewModel"`
 }
 
 func (h *Handler) PostClaimOffline(w http.ResponseWriter, r *http.Request) {
@@ -60,7 +61,7 @@ func (h *Handler) PostClaimOffline(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) PostStartPractice(w http.ResponseWriter, r *http.Request) {
 	now := time.Now().UTC()
 	if err := h.uc.StartPractice(now); err != nil {
-		writeError(w, http.StatusInternalServerError, "internal", err.Error())
+		writeTaskError(w, err)
 		return
 	}
 	writeJSON(w, http.StatusOK, h.uc.GetViewModel())
@@ -70,7 +71,7 @@ func (h *Handler) PostStartPractice(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) PostStartTargeted(w http.ResponseWriter, r *http.Request) {
 	now := time.Now().UTC()
 	if err := h.uc.StartTargeted(now); err != nil {
-		writeError(w, http.StatusInternalServerError, "internal", err.Error())
+		writeTaskError(w, err)
 		return
 	}
 	writeJSON(w, http.StatusOK, h.uc.GetViewModel())
@@ -80,7 +81,7 @@ func (h *Handler) PostStartTargeted(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) PostStartDeploy(w http.ResponseWriter, r *http.Request) {
 	now := time.Now().UTC()
 	if err := h.uc.StartDeploy(now); err != nil {
-		writeError(w, http.StatusInternalServerError, "internal", err.Error())
+		writeTaskError(w, err)
 		return
 	}
 	writeJSON(w, http.StatusOK, h.uc.GetViewModel())
@@ -90,10 +91,19 @@ func (h *Handler) PostStartDeploy(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) PostStartResearch(w http.ResponseWriter, r *http.Request) {
 	now := time.Now().UTC()
 	if err := h.uc.StartResearch(now); err != nil {
-		writeError(w, http.StatusInternalServerError, "internal", err.Error())
+		writeTaskError(w, err)
 		return
 	}
 	writeJSON(w, http.StatusOK, h.uc.GetViewModel())
+}
+
+// writeTaskError 將任務相關的 domain error 映射成合適的 HTTP 狀態碼。
+func writeTaskError(w http.ResponseWriter, err error) {
+	if errors.Is(err, player.ErrTaskAlreadyActive) {
+		writeError(w, http.StatusConflict, "task_already_active", err.Error())
+		return
+	}
+	writeError(w, http.StatusInternalServerError, "internal", err.Error())
 }
 
 // Try to finish current task
@@ -134,29 +144,32 @@ func (h *Handler) PostSelectLanguage(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, h.uc.GetViewModel())
 }
 
-// Buy a server (consumes Knowledge; adds GPU slots)
-type buyResp struct {
-	OK        bool             `json:"ok"`
-	ViewModel dto.ViewModelDto `json:"viewModel"`
-}
-
 func (h *Handler) PostBuyServer(w http.ResponseWriter, r *http.Request) {
-	ok, err := h.uc.BuyServer()
-	if err != nil {
+	if err := h.uc.BuyServer(); err != nil {
+		if errors.Is(err, player.ErrInsufficientKnowledge) {
+			writeError(w, http.StatusBadRequest, "not_enough_knowledge", err.Error())
+			return
+		}
 		writeError(w, http.StatusInternalServerError, "internal", err.Error())
 		return
 	}
-	writeJSON(w, http.StatusOK, buyResp{OK: ok, ViewModel: h.uc.GetViewModel()})
+	writeJSON(w, http.StatusOK, h.uc.GetViewModel())
 }
 
 // Buy a GPU (consumes Knowledge; requires free slot)
 func (h *Handler) PostBuyGPU(w http.ResponseWriter, r *http.Request) {
-	ok, err := h.uc.BuyGPU()
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, "internal", err.Error())
+	if err := h.uc.BuyGPU(); err != nil {
+		switch {
+		case errors.Is(err, player.ErrNoSlotAvailable):
+			writeError(w, http.StatusBadRequest, "no_slot_available", err.Error())
+		case errors.Is(err, player.ErrInsufficientKnowledge):
+			writeError(w, http.StatusBadRequest, "not_enough_knowledge", err.Error())
+		default:
+			writeError(w, http.StatusInternalServerError, "internal", err.Error())
+		}
 		return
 	}
-	writeJSON(w, http.StatusOK, buyResp{OK: ok, ViewModel: h.uc.GetViewModel()})
+	writeJSON(w, http.StatusOK, h.uc.GetViewModel())
 }
 
 // --- shared helpers (local to game module) ---
