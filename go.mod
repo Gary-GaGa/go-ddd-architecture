@@ -8,7 +8,7 @@ require (
 	go.etcd.io/bbolt v1.4.2
 	go.uber.org/fx v1.19.3
 	go.uber.org/zap v1.23.0
-	golang.org/x/image v0.38.0
+	golang.org/x/image v0.41.0
 )
 
 require (
@@ -24,5 +24,5 @@ require (
 	go.uber.org/multierr v1.6.0 // indirect
 	golang.org/x/sync v0.20.0 // indirect
 	golang.org/x/sys v0.29.0 // indirect
-	golang.org/x/text v0.35.0 // indirect
+	golang.org/x/text v0.37.0 // indirect
 )
